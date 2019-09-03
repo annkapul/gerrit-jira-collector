@@ -1,0 +1,7 @@
+export JIRA_USER='user@email.com'
+export JIRA_PASSWORD='token'
+export JIRA_API_URL='https://jira-url/rest/api/2'
+
+export GERRIT_URL='https://gerrit-url'
+export GERRIT_USER='user'
+export GERRIT_PASSWORD='token'

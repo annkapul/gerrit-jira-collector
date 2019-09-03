@@ -1,0 +1,5 @@
+=== How to start ===
+```
+source rc
+python jira_tasks.py PROD-123456
+```
