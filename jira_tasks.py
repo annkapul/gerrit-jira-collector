@@ -2,7 +2,21 @@ import requests
 import os
 import argparse
 import json
+import logging
 from pygerrit2 import GerritRestAPI, HTTPBasicAuth
+from gerritclient import client as gerrit_cl
+logFormatter = logging.Formatter('%(asctime)-15s %(name)s[%(levelname)s] %(message)s')
+
+rootLogger = logging.getLogger()
+
+fileHandler = logging.FileHandler("debug.log")
+fileHandler.setLevel(logging.DEBUG)
+fileHandler.setFormatter(logFormatter)
+rootLogger.addHandler(fileHandler)
+
+# consoleHandler = logging.StreamHandler()
+# consoleHandler.setFormatter(logFormatter)
+# rootLogger.addHandler(consoleHandler)
 
 jira_api_url = os.environ.get("JIRA_API_URL")
 jira_user = os.environ.get("JIRA_USER")
@@ -12,17 +26,23 @@ gerrit_url = os.environ.get("GERRIT_URL")
 gerrit_user = os.environ.get("GERRIT_USER")
 gerrit_password = os.environ.get("GERRIT_PASSWORD")
 
-gerrit_auth = HTTPBasicAuth(gerrit_user, gerrit_password)
-gerrit_api = GerritRestAPI(url=gerrit_url, auth=gerrit_auth)
-
+# gerrit_auth = HTTPBasicAuth(gerrit_user, gerrit_password)
+# gerrit_api = GerritRestAPI(url=gerrit_url, auth=gerrit_auth)
+connection = gerrit_cl.connect(gerrit_url,
+                               auth_type="basic",
+                               username=gerrit_user,
+                               password=gerrit_password)
+gerrit_api = gerrit_cl.get_client('change', connection=connection)
 
 def get_all_patches_from_issue(issue_number):
     """
     """
     # ================= Get list of links for specific issue ======================
-    response = requests.get(f"{jira_api_url}/issue/{issue_number}/remotelink",
+    request = f"{jira_api_url}/issue/{issue_number}/remotelink"
+    response = requests.get(request,
                             headers={"Content-Type": "application/json"},
                             auth=tuple([jira_user, jira_password]))
+    rootLogger.debug(f"Request {request} \n {'-'*20} \nResponse: {response}")
     if response.status_code != 200:
         print("Got unexpected status code for request")
         return []
@@ -73,7 +93,7 @@ def get_all_subtasks(issue_number):
 
 
 def get_patch_link(patch_id):
-    return f"{gerrit_url}/#/c/{patch_id}"
+    return f"{gerrit_url}/c/{patch_id}"
 
 class Report:
     def __init__(self, issue, list_of_patches):
@@ -85,7 +105,7 @@ class Report:
         self.all_patch_data = list()
         for patch_url in self.list_of_patches:
             patch_id = patch_url.split("/")[-1]
-            change = gerrit_api.get(f"/changes/{patch_id}")
+            change = gerrit_api.get_by_id(patch_id)
             if change in self.all_patch_data:
                 continue
             self.all_patch_data.append(change)
